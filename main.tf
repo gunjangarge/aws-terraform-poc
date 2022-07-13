@@ -80,11 +80,42 @@ resource "aws_iam_policy" "iam_policy_for_lambda" {
 EOF
 }
 
+// Add IAM Policy
+
+resource "aws_iam_policy" "iam_policy_for_lambda_invokeFunction" {
+
+  name        = "DBasS_Test_Lambda_Function_Policy2"
+  path        = "/"
+  description = "AWS IAM Policy for managing aws lambda role"
+  policy      = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction",
+                "lambda:GetAccountSettings"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+EOF
+}
+
 // Attach IAM Policy to IAM Role
 
 resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role" {
   role       = aws_iam_role.lambda_role.name
   policy_arn = aws_iam_policy.iam_policy_for_lambda.arn
+}
+
+resource "aws_iam_role_policy_attachment" "attach_iam_policy_to_iam_role2" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = aws_iam_policy.iam_policy_for_lambda_invokeFunction.arn
 }
 
 // Add python modules as layer for lambda
@@ -109,6 +140,7 @@ resource "aws_lambda_function" "terraform_lambda_func" {
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_function.lambda_handler"
   runtime       = "python3.8"
+  timeout       = 60
   layers        = [aws_lambda_layer_version.lambda_layer.arn]
 
   depends_on = [aws_iam_role_policy_attachment.attach_iam_policy_to_iam_role]
