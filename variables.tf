@@ -1,15 +1,11 @@
-variable "aws_region" {
-  default = "us-east-1"
+variable "aws_instance_name" {
+  default = "couch-db-server-1"
 }
 
-variable "secret_key" {
-  default = "<ACTUAL_SECRET_KEY>"
+variable "aws_instance_type" {
+  default = "t2.micro"
 }
 
-variable "access_key" {
-  default = "<ACTUAL_ACCESS_KEY>"
-}
-
-variable "lambda_code_repo" {
-  default = "https://github.com/gunjangarge/aws-lambda-poc.git"
+variable "aws_instance_ami_id" {
+  default = "ami-0cff7528ff583bf9a"
 }
