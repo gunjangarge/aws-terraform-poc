@@ -1,0 +1,69 @@
+{
+	"min_packer_version": "0.12.0",
+	"variables": {
+		"aws_region": "us-east-1",
+		"base_ami_name": "couchbase"
+	},
+	"builders": [
+		{
+			"name": "ubuntu-ami",
+			"ami_name": "{{user `base_ami_name`}}-ubuntu2204-{{isotime | clean_resource_name}}",
+			"ami_description": "An Ubuntu 22.04 AMI that has Couchbase installed.",
+			"instance_type": "t2.micro",
+			"region": "{{user `aws_region`}}",
+			"type": "amazon-ebs",
+			"source_ami_filter": {
+				"filters": {
+					"virtualization-type": "hvm",
+					"architecture": "x86_64",
+					"name": "*ubuntu-jammy-22.04-amd64-server-*",
+					"block-device-mapping.volume-type": "gp2",
+					"root-device-type": "ebs"
+				},
+				"owners": [
+					"099720109477"
+				],
+				"most_recent": true
+			},
+			"ssh_username": "ubuntu"
+		}
+	],
+	"provisioners": [
+		{
+			"type": "shell",
+			"pause_before": "5s",
+			"inline": [
+				"apt-get update",
+				"export DEBIAN_FRONTEND=noninteractive",
+				"sudo apt update && sudo apt install -y curl apt-transport-https gnupg",
+				"curl https://couchdb.apache.org/repo/keys.asc | gpg --dearmor | sudo tee /usr/share/keyrings/couchdb-archive-keyring.gpg >/dev/null 2>&1",
+				"source /etc/os-release",
+				"echo 'deb [signed-by=/usr/share/keyrings/couchdb-archive-keyring.gpg] https://apache.jfrog.io/artifactory/couchdb-deb/ ${VERSION_CODENAME} main' | sudo tee /etc/apt/sources.list.d/couchdb.list >/dev/null",
+				"export COUCHDB_PASSWORD=password",
+				"echo \"couchdb couchdb/mode select clustered\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/mode seen true\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/nodename string couchdb@PUBLIC-FQDN\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/nodename seen true\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/cookie string WbNWwE52IHQ3o8nNtqSIVbPG3DHjiR8l\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/cookie seen true\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/bindaddress string 0.0.0.0\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/bindaddress seen true\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/adminpass password ${COUCHDB_PASSWORD}\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/adminpass seen true\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/adminpass_again password ${COUCHDB_PASSWORD}\" | sudo debconf-set-selections",
+				"echo \"couchdb couchdb/adminpass_again seen true\" | sudo debconf-set-selections",
+				"sudo DEBIAN_FRONTEND=noninteractive apt-get install -y couchdb",
+				"sudo systemctl enable couchdb"
+			]
+		},
+		{
+			"type": "shell",
+			"pause_before": "5s",
+			"inline": [
+			"sed -i -e 's/kernel inet_dist_use_interface {127,0,0,1}/kernel inet_dist_use_interface {0,0,0,0}/g' /opt/couchdb/etc/vm.args",
+			"sed -i -e '/kernel inet_dist_use_interface/a -kernel inet_dist_listen_min 9100\n-kernel inet_dist_listen_max 9200' /opt/couchdb/etc/vm.args"
+			]
+		}
+	],
+	"post-processors": []
+}
